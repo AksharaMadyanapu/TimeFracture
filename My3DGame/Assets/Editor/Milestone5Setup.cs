@@ -392,7 +392,7 @@ namespace TimeFracture.Editor
             NavMeshAgent agent = ghostObj.AddComponent<NavMeshAgent>();
             agent.height = 2f;
             agent.radius = 0.5f;
-            agent.baseOffset = 0f;   // pivot IS the agent base — no extra shift needed
+            agent.baseOffset = 1.0f; // Pivot is capsule center; baseOffset = 1.0f rests capsule bottom on floor
             agent.speed = 2.0f;
             agent.angularSpeed = 240f;
             agent.acceleration = 12f;

@@ -57,8 +57,21 @@ namespace TimeFracture.Player
         // UNITY LIFECYCLE
         // ──────────────────────────────────────────────────
 
+        public static Flashlight Instance { get; private set; }
+        public bool IsOn => spotLight != null && spotLight.enabled;
+
+        private void Awake()
+        {
+            Instance = this;
+        }
+
         private void Start()
         {
+            if (spotLight == null)
+            {
+                spotLight = GetComponentInChildren<Light>();
+            }
+
             if (spotLight == null)
             {
                 Debug.LogWarning("[Flashlight] No Spot Light assigned! " +

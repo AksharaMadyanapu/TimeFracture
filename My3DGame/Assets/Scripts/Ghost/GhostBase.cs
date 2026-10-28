@@ -121,6 +121,11 @@ namespace TimeFracture.Ghost
             SelfWireComponents();
         }
 
+        protected virtual void OnEnable()
+        {
+            SelfWireComponents();
+        }
+
         protected virtual void SelfWireComponents()
         {
             if (agent == null) agent = GetComponent<NavMeshAgent>();
@@ -135,6 +140,7 @@ namespace TimeFracture.Ghost
                 agent.stoppingDistance = waypointArrivalDistance > 0f ? waypointArrivalDistance : 1.0f;
                 agent.height = 2f;
                 agent.radius = 0.5f;
+                agent.baseOffset = 1.0f; // Ensure capsule bottom rests on floor (not sunken)
             }
 
             // Find player transform with robust multi-step fallbacks

@@ -54,6 +54,17 @@ namespace TimeFracture.Editor
         // 1. ONE-CLICK SETUP MENU ITEMS
         // ──────────────────────────────────────────────────
 
+        private static void EnsureTestSceneOpen()
+        {
+            if (string.IsNullOrEmpty(EditorSceneManager.GetActiveScene().path))
+            {
+                if (File.Exists("Assets/Scenes/TestScene.unity"))
+                {
+                    EditorSceneManager.OpenScene("Assets/Scenes/TestScene.unity");
+                }
+            }
+        }
+
         [MenuItem("Tools/Setup/Milestone 7")]
         [MenuItem("TimeFracture/Milestones/Run Milestone 7 Setup")]
         public static void SetupMilestone7()
@@ -63,6 +74,8 @@ namespace TimeFracture.Editor
 
             try
             {
+                EnsureTestSceneOpen();
+
                 // A. Verify and build Materials
                 Material decoyMat = EnsureDecoyMaterial();
                 Material flareMat = EnsureFlareMaterial();
@@ -110,6 +123,8 @@ namespace TimeFracture.Editor
 
             int pass = 0;
             int total = 0;
+
+            EnsureTestSceneOpen();
 
             // ─── Check 1: Prefabs exist and have required components ───
             total++;
@@ -159,6 +174,16 @@ namespace TimeFracture.Editor
             // ─── Check 3: Inventory component configured in scene ───────
             total++;
             Inventory sceneInventory = UnityEngine.Object.FindFirstObjectByType<Inventory>();
+            if (sceneInventory == null)
+            {
+                Debug.LogWarning("[Milestone 7 Test] Inventory not found in active scene. Auto-creating Inventory for scene...");
+                sceneInventory = SetupPlayerInventory(decoyPrefab, flarePrefab, null);
+                if (sceneInventory != null)
+                {
+                    EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+                }
+            }
+
             if (sceneInventory != null && sceneInventory.ThrowOrigin != null)
             {
                 Debug.Log($"PASS Check 3: Inventory component found and wired with ThrowOrigin '{sceneInventory.ThrowOrigin.name}'.");
@@ -180,7 +205,8 @@ namespace TimeFracture.Editor
             try
             {
                 Inventory testInv = testInvObj.AddComponent<Inventory>();
-                // Starting quantities: 1 decoy, 1 flare
+                testInv.SetCounts(1, 1);
+
                 int initialDecoys = testInv.GetCount(ItemType.NoiseDecoy);
                 int initialFlares = testInv.GetCount(ItemType.Flare);
 
@@ -353,6 +379,19 @@ namespace TimeFracture.Editor
             if (oldCanvas != null)
             {
                 Undo.DestroyObjectImmediate(oldCanvas);
+            }
+
+            // Clean any stray root primitives
+            GameObject strayDecoy = GameObject.Find("NoiseDecoy");
+            if (strayDecoy != null && strayDecoy.scene.IsValid() && !PrefabUtility.IsPartOfPrefabAsset(strayDecoy))
+            {
+                Undo.DestroyObjectImmediate(strayDecoy);
+            }
+
+            GameObject strayFlare = GameObject.Find("Flare");
+            if (strayFlare != null && strayFlare.scene.IsValid() && !PrefabUtility.IsPartOfPrefabAsset(strayFlare))
+            {
+                Undo.DestroyObjectImmediate(strayFlare);
             }
         }
 

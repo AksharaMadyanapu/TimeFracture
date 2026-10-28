@@ -53,8 +53,19 @@ namespace TimeFracture.Player
         // UNITY LIFECYCLE
         // ──────────────────────────────────────────────────
 
+        public float Sensitivity => sensitivityX;
+
+        public void SetSensitivity(float newSensitivity)
+        {
+            sensitivityX = newSensitivity;
+            sensitivityY = newSensitivity;
+        }
+
         private void Start()
         {
+            float saved = PlayerPrefs.GetFloat("MouseSensitivity", sensitivityX);
+            SetSensitivity(saved);
+
             // Hide the cursor and lock it to the centre of the screen.
             // This is the standard FPS cursor setup.
             Cursor.lockState = CursorLockMode.Locked;

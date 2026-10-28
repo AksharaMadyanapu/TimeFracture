@@ -209,8 +209,12 @@ namespace TimeFracture.Ghost
             return clip;
         }
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
+            if (agent == null) agent = GetComponent<NavMeshAgent>() ?? gameObject.AddComponent<NavMeshAgent>();
+            if (agent != null) agent.baseOffset = 1.0f;
+
             EraManager.OnEraChanged += HandleEraChanged;
             NoiseEmitter.OnNoiseMade += HandleNoiseMade;
 
@@ -306,7 +310,8 @@ namespace TimeFracture.Ghost
         private void HandleNoiseMade(Vector3 noisePos, float noiseRadius)
         {
             // The Echo only hears sound while alive and active in the Past
-            if (isDeadOrDisabled || !agent.enabled || !agent.isOnNavMesh) return;
+            if (agent == null) agent = GetComponent<NavMeshAgent>();
+            if (isDeadOrDisabled || agent == null || !agent.enabled || !agent.isOnNavMesh) return;
 
             // Distance from ghost to noise origin
             float dist = Vector3.Distance(transform.position, noisePos);

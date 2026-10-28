@@ -76,8 +76,8 @@ namespace TimeFracture.Items
         // INTERNAL STATE
         // ──────────────────────────────────────────────────
 
-        private int _decoyCount;
-        private int _flareCount;
+        private int _decoyCount = 1;
+        private int _flareCount = 1;
 
         // ──────────────────────────────────────────────────
         // PROPERTIES
@@ -91,6 +91,20 @@ namespace TimeFracture.Items
         // ──────────────────────────────────────────────────
         // UNITY LIFECYCLE
         // ──────────────────────────────────────────────────
+
+        private void Reset()
+        {
+            _decoyCount = startingDecoys;
+            _flareCount = startingFlares;
+            SelfWireReferences();
+        }
+
+        public void SetCounts(int decoys, int flares)
+        {
+            _decoyCount = Mathf.Clamp(decoys, 0, maxStackSize);
+            _flareCount = Mathf.Clamp(flares, 0, maxStackSize);
+            UpdateHUD();
+        }
 
         private void Awake()
         {
