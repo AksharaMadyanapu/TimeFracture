@@ -375,5 +375,36 @@ namespace TimeFracture.Ghost
             waypoints = newWaypoints;
             currentWaypointIndex = 0;
         }
+
+        // ──────────────────────────────────────────────────
+        // MILESTONE 6 HUNT HOOK
+        // ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// True when this ghost is able to begin hunting (not already hunting or dead).
+        /// Used by GhostActivityManager to decide whether to call StartHunt().
+        /// </summary>
+        public bool CanHunt => !isDeadOrDisabled &&
+                               currentState != GhostState.Hunt &&
+                               currentState != GhostState.Search;
+
+        /// <summary>
+        /// Called by GhostActivityManager when the activity meter hits the Hunting tier.
+        /// Forces the ghost into Hunt state immediately, targeting the player.
+        /// </summary>
+        public void StartHunt()
+        {
+            if (!CanHunt) return;
+
+            // Make sure we have a player position to aim at
+            if (playerTransform != null)
+            {
+                lastKnownPlayerPos = playerTransform.position;
+                investigateTargetPos = playerTransform.position;
+            }
+
+            SetState(GhostState.Hunt);
+            Debug.Log($"[{GetType().Name}] Hunt triggered by GhostActivityManager!");
+        }
     }
 }
