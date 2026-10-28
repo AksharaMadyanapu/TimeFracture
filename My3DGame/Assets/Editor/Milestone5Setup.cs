@@ -386,9 +386,13 @@ namespace TimeFracture.Editor
             }
 
             // NavMeshAgent configuration
+            // baseOffset = 0: the agent's base aligns with the GameObject pivot.
+            // The capsule pivot is at its centre (height 2 → centre 1 m above floor).
+            // We position the GameObject at y=1 so the capsule bottom sits on y=0.
             NavMeshAgent agent = ghostObj.AddComponent<NavMeshAgent>();
             agent.height = 2f;
             agent.radius = 0.5f;
+            agent.baseOffset = 0f;   // pivot IS the agent base — no extra shift needed
             agent.speed = 2.0f;
             agent.angularSpeed = 240f;
             agent.acceleration = 12f;
@@ -528,7 +532,10 @@ namespace TimeFracture.Editor
             }
 
             echoObj.name = "The_Echo";
-            echoObj.transform.position = spawnPoint != null ? spawnPoint.position : new Vector3(4f, 1f, 4f);
+            // Capsule pivot is at its geometric centre (half-height = 1 m).
+            // Raise Y by 1 so the capsule bottom sits exactly on the floor/NavMesh surface.
+            Vector3 basePos = spawnPoint != null ? spawnPoint.position : new Vector3(4f, 0f, 4f);
+            echoObj.transform.position = new Vector3(basePos.x, basePos.y + 1f, basePos.z);
 
             Echo echo = echoObj.GetComponent<Echo>();
             if (echo != null)

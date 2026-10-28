@@ -56,7 +56,7 @@ namespace TimeFracture.Ghost
 
             InitStyles();
 
-            GUILayout.BeginArea(new Rect(15, 15, 340, 240), _boxStyle);
+            GUILayout.BeginArea(new Rect(Screen.width - 355, 15, 340, 240), _boxStyle);
             GUILayout.Label("<b>THE ECHO — DEBUG HUD [F2 to toggle]</b>", _headerStyle);
             GUILayout.Space(6);
 
