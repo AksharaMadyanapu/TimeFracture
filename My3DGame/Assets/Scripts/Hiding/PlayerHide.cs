@@ -34,6 +34,12 @@ namespace TimeFracture.Hiding
         /// <summary>True while the player is currently inside a hiding spot.</summary>
         public static bool IsHidden { get; private set; }
 
+        /// <summary>Singleton reference to the active PlayerHide component.</summary>
+        public static PlayerHide Instance { get; private set; }
+
+        /// <summary>True if the player is currently holding breath inside a locker.</summary>
+        public static bool IsPlayerHoldingBreath => Instance != null && Instance.IsHoldingBreath;
+
         /// <summary>Fired whenever the player enters or exits a hiding spot.</summary>
         public static event Action<bool> OnHiddenChanged;
 
@@ -120,6 +126,7 @@ namespace TimeFracture.Hiding
 
         private void Awake()
         {
+            Instance = this;
             _playerController = GetComponent<PlayerController>();
             _playerLook = GetComponent<PlayerLook>();
             _characterController = GetComponent<CharacterController>();
@@ -161,6 +168,14 @@ namespace TimeFracture.Hiding
             if (IsHidden)
             {
                 ForceEject();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
             }
         }
 

@@ -42,6 +42,11 @@ namespace TimeFracture.Hiding
         /// </summary>
         public static HidingSpot PlayerIsHiddenAt { get; internal set; }
 
+        /// <summary>
+        /// Global list of all active hiding spots in the scene for ghost AI search queries.
+        /// </summary>
+        public static readonly System.Collections.Generic.List<HidingSpot> AllSpots = new System.Collections.Generic.List<HidingSpot>();
+
         // ──────────────────────────────────────────────────
         // INSPECTOR FIELDS
         // ──────────────────────────────────────────────────
@@ -128,6 +133,19 @@ namespace TimeFracture.Hiding
                 ep.transform.localRotation = Quaternion.identity;
                 exitPoint = ep.transform;
             }
+        }
+
+        private void OnEnable()
+        {
+            if (!AllSpots.Contains(this))
+            {
+                AllSpots.Add(this);
+            }
+        }
+
+        private void OnDisable()
+        {
+            AllSpots.Remove(this);
         }
 
         // ──────────────────────────────────────────────────
