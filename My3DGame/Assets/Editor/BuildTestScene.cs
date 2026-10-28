@@ -18,11 +18,14 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.AI;
 
 using TimeFracture.Player;
 using TimeFracture.World;
 using TimeFracture.Era;
 using TimeFracture.Hiding;
+using TimeFracture.Ghost;
+using TimeFracture.Game;
 
 namespace TimeFracture.Editor
 {
@@ -46,6 +49,7 @@ namespace TimeFracture.Editor
         private static Material matWallPast;
         private static Material matWallPresent;
         private static Material matMetalDark;
+        private static Material matGhostEcho;
 
         private static TMP_FontAsset defaultFont;
 
@@ -155,8 +159,14 @@ namespace TimeFracture.Editor
                 BuildCrouchTestArea();
             }, ref hasErrors);
 
-            // 15. Save Scene
-            TryExecuteStep(15, "Save Scene", () =>
+            // 15. Build The Echo (Ghost #1)
+            TryExecuteStep(15, "Build The Echo Ghost (Milestone 5)", () =>
+            {
+                BuildEchoGhost();
+            }, ref hasErrors);
+
+            // 16. Save Scene
+            TryExecuteStep(16, "Save Scene", () =>
             {
                 EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
                 EditorSceneManager.SaveOpenScenes();
@@ -334,7 +344,10 @@ namespace TimeFracture.Editor
                 "Room_Present",
                 "ChronoStabilizer",
                 "Wall_Switch",
-                "Crouch_Test_Area"
+                "Crouch_Test_Area",
+                "Echo_Ghost",
+                "Echo_Waypoints",
+                "GameManager"
             };
 
             int deletedCount = 0;
@@ -402,6 +415,7 @@ namespace TimeFracture.Editor
             matWallPast     = GetOrCreateMaterial("Mat_Wall_Past", new Color(0.92f, 0.90f, 0.84f), smoothness: 0.2f); // Warm cream/white
             matWallPresent  = GetOrCreateMaterial("Mat_Wall_Present", new Color(0.28f, 0.24f, 0.22f), smoothness: 0.1f); // Dark desaturated dirty
             matMetalDark    = GetOrCreateMaterial("Mat_Metal_Dark", new Color(0.12f, 0.12f, 0.14f), smoothness: 0.6f);
+            matGhostEcho    = GetOrCreateMaterial("Mat_Ghost_Echo", new Color(0.95f, 0.15f, 0.20f), emission: new Color(0.95f, 0.10f, 0.15f) * 1.8f, smoothness: 0.35f);
 
             AssetDatabase.SaveAssets();
             Debug.Log("[BuildTestScene] Step 5: Created prototype materials in Assets/Materials/Prototype/.");
@@ -455,7 +469,9 @@ namespace TimeFracture.Editor
             floor.transform.SetParent(env.transform);
             floor.transform.position = Vector3.zero;
             floor.transform.localScale = new Vector3(3f, 1f, 3f);
-            floor.GetComponent<MeshRenderer>().sharedMaterial = matFloor;
+#pragma warning disable CS0618
+            GameObjectUtility.SetStaticEditorFlags(floor, StaticEditorFlags.NavigationStatic);
+#pragma warning restore CS0618
 
             GameObject sun = new GameObject("Directional Light");
             sun.transform.SetParent(env.transform);
@@ -616,7 +632,51 @@ namespace TimeFracture.Editor
             breathSlider.targetGraphic = fImg;
             breathObj.SetActive(false);
 
-            Debug.Log("[BuildTestScene] Step 7: Built HUD Canvas with prompts, controls, slats, and breath bar.");
+            // Game Over Overlay
+            GameObject goObj = new GameObject("GameOver_Overlay");
+            goObj.transform.SetParent(canvasObj.transform, false);
+            RectTransform goRect = goObj.AddComponent<RectTransform>();
+            goRect.anchorMin = Vector2.zero;
+            goRect.anchorMax = Vector2.one;
+            goRect.offsetMin = Vector2.zero;
+            goRect.offsetMax = Vector2.zero;
+
+            CanvasGroup goCG = goObj.AddComponent<CanvasGroup>();
+            goCG.alpha = 0f;
+            goCG.interactable = false;
+            goCG.blocksRaycasts = false;
+
+            Image goBg = goObj.AddComponent<Image>();
+            goBg.color = new Color(0.06f, 0.01f, 0.01f, 0.95f);
+
+            GameObject goTextObj = new GameObject("GameOverText");
+            goTextObj.transform.SetParent(goObj.transform, false);
+            RectTransform goTextRect = goTextObj.AddComponent<RectTransform>();
+            goTextRect.anchorMin = new Vector2(0.5f, 0.5f);
+            goTextRect.anchorMax = new Vector2(0.5f, 0.5f);
+            goTextRect.pivot = new Vector2(0.5f, 0.5f);
+            goTextRect.sizeDelta = new Vector2(900f, 300f);
+
+            TextMeshProUGUI goTMP = goTextObj.AddComponent<TextMeshProUGUI>();
+            if (defaultFont != null) goTMP.font = defaultFont;
+            goTMP.fontSize = 42;
+            goTMP.alignment = TextAlignmentOptions.Center;
+            goTMP.color = new Color(0.95f, 0.2f, 0.2f);
+            goTMP.text = "<b>TIMELINE SEVERED</b>\n<size=55%>You were consumed by The Echo.</size>";
+
+            goObj.SetActive(false);
+
+            // GameManager
+            GameManager gm = canvasObj.AddComponent<GameManager>();
+            SerializedObject soGM = new SerializedObject(gm);
+            SafeSetObjectProperty(soGM, "gameOverOverlay", goCG, "GameManager");
+            SafeSetObjectProperty(soGM, "gameOverText", goTMP, "GameManager");
+            SafeSetFloatProperty(soGM, "fadeDuration", 1.5f, "GameManager");
+            SafeSetBoolProperty(soGM, "autoRestart", true, "GameManager");
+            SafeSetFloatProperty(soGM, "restartDelay", 3.0f, "GameManager");
+            soGM.ApplyModifiedProperties();
+
+            Debug.Log("[BuildTestScene] Step 7: Built HUD Canvas with prompts, controls, slats, breath bar, and GameManager overlay.");
         }
 
         // ──────────────────────────────────────────────────
@@ -1095,6 +1155,85 @@ namespace TimeFracture.Editor
             AddFloatingLabel(debugCube, "CROUCH TEST (Ctrl)", new Vector3(0f, 0.7f, 0f), color: Color.cyan);
 
             Debug.Log("[BuildTestScene] Step 14: Built Crouch Test area with low ceiling slab.");
+        }
+
+        // ──────────────────────────────────────────────────
+        // 15. THE ECHO (Ghost #1 - Milestone 5)
+        // ──────────────────────────────────────────────────
+
+        private static void BuildEchoGhost()
+        {
+            // Waypoints parent
+            GameObject wpParent = new GameObject("Echo_Waypoints");
+            Vector3[] wpPositions = new Vector3[]
+            {
+                new Vector3(4f, 0f, 4f),
+                new Vector3(4f, 0f, -4f),
+                new Vector3(-4f, 0f, -4f),
+                new Vector3(-4f, 0f, 4f)
+            };
+
+            Transform[] waypoints = new Transform[wpPositions.Length];
+            for (int i = 0; i < wpPositions.Length; i++)
+            {
+                GameObject wp = new GameObject($"Echo_WP_{i + 1}");
+                wp.transform.SetParent(wpParent.transform);
+                wp.transform.position = wpPositions[i];
+                waypoints[i] = wp.transform;
+            }
+
+            // Echo Ghost Root (Red-tinted Capsule placeholder)
+            GameObject ghost = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            ghost.name = "Echo_Ghost";
+            ghost.transform.position = new Vector3(4f, 1f, 4f);
+            ghost.GetComponent<MeshRenderer>().sharedMaterial = matGhostEcho;
+
+            // NavMeshAgent
+            NavMeshAgent agent = ghost.AddComponent<NavMeshAgent>();
+            agent.height = 2f;
+            agent.radius = 0.5f;
+            agent.speed = 2.0f;
+            agent.angularSpeed = 240f;
+            agent.acceleration = 12f;
+            agent.stoppingDistance = 1.0f;
+
+            // AudioSource
+            AudioSource aSource = ghost.AddComponent<AudioSource>();
+            aSource.playOnAwake = false;
+            aSource.spatialBlend = 1.0f;
+            aSource.minDistance = 2f;
+            aSource.maxDistance = 20f;
+
+            // Echo component
+            Echo echoScript = ghost.AddComponent<Echo>();
+            SerializedObject soEcho = new SerializedObject(echoScript);
+            SafeSetObjectProperty(soEcho, "spawnPoint", waypoints[0], "Echo");
+            SafeSetFloatProperty(soEcho, "hearingRadius", 16.0f, "Echo");
+            SafeSetFloatProperty(soEcho, "loudNoiseThreshold", 10.0f, "Echo");
+            SafeSetFloatProperty(soEcho, "repeatedNoiseWindow", 5.0f, "Echo");
+            SafeSetFloatProperty(soEcho, "roamSpeed", 2.0f, "Echo");
+            SafeSetFloatProperty(soEcho, "investigateSpeed", 3.2f, "Echo");
+            SafeSetFloatProperty(soEcho, "huntSpeed", 5.0f, "Echo");
+            SafeSetFloatProperty(soEcho, "searchSpeed", 2.4f, "Echo");
+            SafeSetFloatProperty(soEcho, "cooldownSpeed", 1.5f, "Echo");
+            SafeSetFloatProperty(soEcho, "catchChanceWhileBreathing", 0.90f, "Echo");
+            SafeSetFloatProperty(soEcho, "catchChanceWhileHoldingBreath", 0.15f, "Echo");
+
+            SerializedProperty wpProp = soEcho.FindProperty("waypoints");
+            if (wpProp != null)
+            {
+                wpProp.arraySize = waypoints.Length;
+                for (int i = 0; i < waypoints.Length; i++)
+                {
+                    wpProp.GetArrayElementAtIndex(i).objectReferenceValue = waypoints[i];
+                }
+            }
+            soEcho.ApplyModifiedProperties();
+
+            // Floating Label
+            AddFloatingLabel(ghost, "THE ECHO (Ghost #1)", new Vector3(0f, 2.3f, 0f), color: new Color(1f, 0.25f, 0.25f));
+
+            Debug.Log("[BuildTestScene] Step 15: Built The Echo ghost (capsule placeholder, NavMeshAgent, waypoints).");
         }
 
         // ──────────────────────────────────────────────────
